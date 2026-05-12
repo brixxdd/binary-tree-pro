@@ -1,12 +1,13 @@
+#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#define _BSD_SOURCE
-#define _DEFAULT_SOURCE
+#include <errno.h>
+#include <dirent.h>
 
 #include "../includes/types.h"
 #include "../includes/io.h"
@@ -43,7 +44,7 @@ TableLayout* calcular_layout_tabla(DefinicionTabla* tabla) {
     return &layout;
 }
 
-static void construir_ruta_tabla(const char* db_nombre, const char* tabla_nombre, char* ruta, size_t tam) {
+void construir_ruta_tabla(const char* db_nombre, const char* tabla_nombre, char* ruta, size_t tam) {
     snprintf(ruta, tam, "data/%s/%s.csv", db_nombre, tabla_nombre);
 }
 
@@ -148,6 +149,42 @@ int escribir_registro_dinamico(const char* db, const char* tabla, char** valores
 
     fclose(f);
     return 0;
+}
+
+void obtener_ultimo_id(const char* db, const char* tabla, char* resultado, int max_len) {
+    char ruta[256];
+    construir_ruta_tabla(db, tabla, ruta, sizeof(ruta));
+
+    FILE* f = fopen(ruta, "r");
+    if (!f) {
+        if (resultado && max_len > 0) resultado[0] = '\0';
+        return;
+    }
+
+    char linea[MAX_LINEA];
+    char* ultima_linea = NULL;
+
+    while (fgets(linea, sizeof(linea), f)) {
+        if (linea[0] != '\n' && linea[0] != '\0') {
+            ultima_linea = strdup(linea);
+        }
+    }
+    fclose(f);
+
+    if (ultima_linea) {
+        size_t len = strlen(ultima_linea);
+        while (len > 0 && (ultima_linea[len-1] == '\n' || ultima_linea[len-1] == '\r')) {
+            ultima_linea[len-1] = '\0';
+            len--;
+        }
+        if (resultado && max_len > 0) {
+            strncpy(resultado, ultima_linea, max_len - 1);
+            resultado[max_len - 1] = '\0';
+        }
+        free(ultima_linea);
+    } else {
+        if (resultado && max_len > 0) resultado[0] = '\0';
+    }
 }
 
 int listar_registros_dinamicos(const char* db, const char* tabla) {

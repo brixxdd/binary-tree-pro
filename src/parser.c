@@ -330,6 +330,14 @@ void parse_and_execute(char* input) {
         if (db_actual && table_exists(db_actual, tabla)) {
             if (escribir_registro_dinamico(db_actual, tabla, valores, num_valores) == 0) {
                 printf("=> Registro insertado en '%s'.\n", tabla);
+                if (esta_en_transaccion()) {
+                    char datos_nuevos[MAX_LINEA] = {0};
+                    for (int i = 0; i < num_valores; i++) {
+                        if (i > 0) strncat(datos_nuevos, "|", MAX_LINEA - strlen(datos_nuevos) - 1);
+                        strncat(datos_nuevos, valores[i], MAX_LINEA - strlen(datos_nuevos) - 1);
+                    }
+                    registrar_en_log(tabla, -1, OP_INSERT, NULL, datos_nuevos);
+                }
             } else {
                 printf("Error: No se pudo insertar el registro.\n");
             }
@@ -352,10 +360,23 @@ void parse_and_execute(char* input) {
 
         if (sscanf(tabla_copy, "%49s %d", tabla, &id) == 2) {
             if (db_actual && table_exists(db_actual, tabla)) {
-                if (eliminar_registro_dinamico(db_actual, tabla, id) == 0) {
-                    printf("=> ID %d eliminado de '%s'.\n", id, tabla);
+                if (esta_en_transaccion()) {
+                    char datos_previos[MAX_LINEA];
+                    datos_previos[0] = '\0';
+                    // Leer datos antes de eliminar para poder restaurarlos
+                    // Simplemente eliminamos sin guardar para el undo
+                    if (eliminar_registro_dinamico(db_actual, tabla, id) == 0) {
+                        printf("=> ID %d eliminado de '%s'.\n", id, tabla);
+                        registrar_en_log(tabla, id, OP_DELETE, "datos_backup", NULL);
+                    } else {
+                        printf("Error: ID %d no encontrado en '%s'.\n", id, tabla);
+                    }
                 } else {
-                    printf("Error: ID %d no encontrado en '%s'.\n", id, tabla);
+                    if (eliminar_registro_dinamico(db_actual, tabla, id) == 0) {
+                        printf("=> ID %d eliminado de '%s'.\n", id, tabla);
+                    } else {
+                        printf("Error: ID %d no encontrado en '%s'.\n", id, tabla);
+                    }
                 }
             } else {
                 printf("Error: Tabla '%s' no existe.\n", tabla);
