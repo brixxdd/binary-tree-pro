@@ -1,0 +1,6 @@
+# Schema for table: personas
+nombre:personas
+modo:1
+num_campos:2
+campo:id|0|4
+campo:nombre|2|50

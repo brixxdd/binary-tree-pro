@@ -15,12 +15,34 @@
 #include "../includes/database.h"
 
 static int en_transaccion = 0;
-static EntradaLog log_transaccion[MAX_LOG_TRANSACCION];
-static int num_entradas = 0;
+static char tx_db_nombre[MAX_NOMBRE] = {0};
+
+const char* tx_log_path(void) {
+    static char path[MAX_NOMBRE + 20];
+    if (tx_db_nombre[0]) {
+        snprintf(path, sizeof(path), "data/%s/_tx_log.csv", tx_db_nombre);
+    } else {
+        path[0] = '\0';
+    }
+    return path;
+}
 
 void iniciar_transaccion(void) {
+    char* db = get_database_actual();
+    if (!db) {
+        printf("Error: No hay base de datos seleccionada.\n");
+        return;
+    }
     en_transaccion = 1;
-    num_entradas = 0;
+    strncpy(tx_db_nombre, db, MAX_NOMBRE - 1);
+    tx_db_nombre[MAX_NOMBRE - 1] = '\0';
+
+    const char* path = tx_log_path();
+    FILE* f = fopen(path, "w");
+    if (f) {
+        fprintf(f, "# TX_LOG v1\n");
+        fclose(f);
+    }
     printf("=> Transaccion iniciada (START TRANSACTION)\n");
 }
 
@@ -29,87 +51,32 @@ void confirmar_transaccion(void) {
         printf("Error: No hay transaccion activa.\n");
         return;
     }
-    en_transaccion = 0;
-    num_entradas = 0;
-    printf("=> Transaccion confirmada (COMMIT).\n");
-}
 
-void registrar_en_log(const char* tabla, int id, OperacionLog operacion, const char* datos_previos, const char* datos_nuevos) {
-    if (!en_transaccion) return;
-    if (num_entradas >= MAX_LOG_TRANSACCION) return;
-
-    EntradaLog* entrada = &log_transaccion[num_entradas];
-    entrada->operacion = operacion;
-    strncpy(entrada->tabla, tabla, 49);
-    entrada->tabla[49] = '\0';
-    entrada->id = id;
-    if (datos_previos) {
-        strncpy(entrada->datos_previos, datos_previos, MAX_LINEA - 1);
-        entrada->datos_previos[MAX_LINEA - 1] = '\0';
-    } else {
-        entrada->datos_previos[0] = '\0';
-    }
-    if (datos_nuevos) {
-        strncpy(entrada->datos_nuevos, datos_nuevos, MAX_LINEA - 1);
-        entrada->datos_nuevos[MAX_LINEA - 1] = '\0';
-    } else {
-        entrada->datos_nuevos[0] = '\0';
-    }
-    num_entradas++;
-}
-
-void deshacer_transaccion(void) {
-    if (!en_transaccion) {
-        printf("Error: No hay transaccion activa.\n");
+    const char* path = tx_log_path();
+    FILE* log = fopen(path, "r");
+    if (!log) {
+        printf("Error: No se pudo abrir log de transaccion.\n");
+        en_transaccion = 0;
+        tx_db_nombre[0] = '\0';
         return;
     }
 
-    printf("=> Transaccion cancelada (ROLLBACK).\n");
-
-    for (int i = num_entradas - 1; i >= 0; i--) {
-        EntradaLog* entrada = &log_transaccion[i];
-
-        char* db_actual = get_database_actual();
-        if (!db_actual) {
-            printf("  (undo skip: no hay DB activa)\n");
-            continue;
+    char linea[MAX_LINEA];
+    while (fgets(linea, sizeof(linea), log)) {
+        size_t len = strlen(linea);
+        while (len > 0 && (linea[len-1] == '\n' || linea[len-1] == '\r')) {
+            linea[len-1] = '\0';
+            len--;
         }
-        if (entrada->operacion == OP_INSERT) {
-            // Undo INSERT = eliminar la línea que coincide con datos_nuevos
-            if (entrada->datos_nuevos[0]) {
-                char ruta[256];
-                construir_ruta_tabla(db_actual, entrada->tabla, ruta, sizeof(ruta));
+        if (linea[0] == '#' || len == 0) continue;
 
-                FILE* f = fopen(ruta, "r");
-                FILE* tmp = fopen("data/.undo_tmp", "w");
-                if (f && tmp) {
-                    char linea[MAX_LINEA];
-                    while (fgets(linea, sizeof(linea), f)) {
-                        size_t len = strlen(linea);
-                        while (len > 0 && (linea[len-1] == '\n' || linea[len-1] == '\r')) {
-                            linea[len-1] = '\0';
-                            len--;
-                        }
-                        if (strcmp(linea, entrada->datos_nuevos) != 0) {
-                            fprintf(tmp, "%s\n", linea);
-                        }
-                    }
-                    fclose(f);
-                    fclose(tmp);
-                    rename("data/.undo_tmp", ruta);
-                    printf("  (undo INSERT en '%s')\n", entrada->tabla);
-                } else {
-                    if (f) fclose(f);
-                    if (tmp) fclose(tmp);
-                }
-            }
-        }
-        else if (entrada->operacion == OP_DELETE) {
-            // Undo DELETE = re-insertar los datos previos
-            if (entrada->datos_previos[0]) {
+        if (strncmp(linea, "INSERT|", 7) == 0) {
+            char* ptr = linea + 7;
+            char tabla[50], datos[MAX_LINEA];
+            if (sscanf(ptr, "%49[^|]|%[^\n]", tabla, datos) == 2) {
                 char* valores[MAX_CAMPOS];
                 char copia[MAX_LINEA];
-                strncpy(copia, entrada->datos_previos, MAX_LINEA - 1);
+                strncpy(copia, datos, MAX_LINEA - 1);
                 copia[MAX_LINEA - 1] = '\0';
 
                 int num_vals = 0;
@@ -120,16 +87,110 @@ void deshacer_transaccion(void) {
                     token = strtok(NULL, "|");
                 }
 
-                escribir_registro_dinamico(db_actual, entrada->tabla, valores, num_vals);
-                printf("  (undo DELETE id=%d en '%s', restaurado: %s)\n", entrada->id, entrada->tabla, entrada->datos_previos);
-
+                escribir_registro_dinamico(tx_db_nombre, tabla, valores, num_vals);
                 for (int j = 0; j < num_vals; j++) free(valores[j]);
             }
         }
     }
+    fclose(log);
 
+    unlink(path);
     en_transaccion = 0;
-    num_entradas = 0;
+    tx_db_nombre[0] = '\0';
+    printf("=> Transaccion confirmada (COMMIT).\n");
+}
+
+void registrar_en_log(const char* tabla, int id, OperacionLog operacion, const char* datos_previos, const char* datos_nuevos) {
+    if (!en_transaccion || !tx_db_nombre[0]) return;
+
+    const char* path = tx_log_path();
+    FILE* f = fopen(path, "a");
+    if (!f) return;
+
+    if (operacion == OP_INSERT && datos_nuevos) {
+        fprintf(f, "INSERT|%s|%s\n", tabla, datos_nuevos);
+    } else if (operacion == OP_DELETE && datos_previos) {
+        fprintf(f, "DELETE|%s|%d|%s\n", tabla, id, datos_previos);
+    }
+    fclose(f);
+}
+
+void deshacer_transaccion(void) {
+    if (!en_transaccion) {
+        printf("Error: No hay transaccion activa.\n");
+        return;
+    }
+
+    const char* path = tx_log_path();
+    FILE* log = fopen(path, "r");
+    if (!log) {
+        printf("Error: No se pudo abrir log de transaccion.\n");
+        en_transaccion = 0;
+        tx_db_nombre[0] = '\0';
+        return;
+    }
+
+    printf("=> Transaccion cancelada (ROLLBACK).\n");
+
+    char lineas[MAX_LOG_TRANSACCION][MAX_LINEA];
+    int num_lineas = 0;
+
+    char linea[MAX_LINEA];
+    while (fgets(linea, sizeof(linea), log) && num_lineas < MAX_LOG_TRANSACCION) {
+        size_t len = strlen(linea);
+        while (len > 0 && (linea[len-1] == '\n' || linea[len-1] == '\r')) {
+            linea[len-1] = '\0';
+            len--;
+        }
+        if (linea[0] == '#' || len == 0) continue;
+        strncpy(lineas[num_lineas], linea, MAX_LINEA - 1);
+        lineas[num_lineas][MAX_LINEA - 1] = '\0';
+        num_lineas++;
+    }
+    fclose(log);
+
+    // Procesar al revés (undo)
+    for (int i = num_lineas - 1; i >= 0; i--) {
+        char copia[MAX_LINEA];
+        strncpy(copia, lineas[i], MAX_LINEA - 1);
+        copia[MAX_LINEA - 1] = '\0';
+
+        if (strncmp(copia, "INSERT|", 7) == 0) {
+            char* ptr = copia + 7;
+            char tabla[50], datos[MAX_LINEA];
+            if (sscanf(ptr, "%49[^|]|%[^\n]", tabla, datos) == 2) {
+                char ruta[256];
+                construir_ruta_tabla(tx_db_nombre, tabla, ruta, sizeof(ruta));
+
+                FILE* f = fopen(ruta, "r");
+                FILE* tmp = fopen("data/.undo_tmp", "w");
+                if (f && tmp) {
+                    char l[MAX_LINEA];
+                    while (fgets(l, sizeof(l), f)) {
+                        size_t l_len = strlen(l);
+                        while (l_len > 0 && (l[l_len-1] == '\n' || l[l_len-1] == '\r')) {
+                            l[l_len-1] = '\0';
+                            l_len--;
+                        }
+                        if (strcmp(l, datos) != 0) {
+                            fprintf(tmp, "%s\n", l);
+                        }
+                    }
+                    fclose(f);
+                    fclose(tmp);
+                    rename("data/.undo_tmp", ruta);
+                    printf("  (undo INSERT en '%s')\n", tabla);
+                } else {
+                    if (f) fclose(f);
+                    if (tmp) fclose(tmp);
+                }
+            }
+        }
+    }
+
+    unlink(path);
+    en_transaccion = 0;
+    tx_db_nombre[0] = '\0';
 }
 
 int esta_en_transaccion(void) {

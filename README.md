@@ -227,3 +227,26 @@ campo:telefono|2|14
 3. **Transacciones**: Los cambios solo se persisten al ejecutar `CONFIRMAR` o al salir del programa sin errores
 
 4. **Tipos de datos**: Son case-insensitive (INT = int = Int)
+
+## Limitación de Transacciones en API
+
+**Problema**: Cada request al API spawns un proceso motor nuevo. El estado de transacción (`en_transaccion`) se pierde entre requests.
+
+```
+Request 1: INICIAR TRANSACCION  → motor #1 arranca, tx=ON
+Request 2: INSERTAR           → motor #2 arranca, tx=OFF (nuevo!)
+Request 3: DESHACER            → motor #3 arranca, tx=OFF
+```
+
+**Solución implementada**: Transacciones file-based. El log se guarda en `data/<db>/_tx_log.csv`.
+
+```
+INICIAR TRANSACCION → crea data/<db>/_tx_log.csv
+INSERTAR            → append a _tx_log.csv (NO al CSV principal)
+CONFIRMAR           → mueve registros de _tx_log.csv → CSV principal
+DESHACER            → borra _tx_log.csv (registros nunca fueron al CSV)
+```
+
+**Importante**: Una transacción a la vez por base de datos. Cerrar la transacción antes de cambiar de DB.
+
+**Estado actual**: Transacciones funcionan en terminal. En frontend/API requieren una sesión persistente (futuro). Por ahora, usar transacciones solo en terminal.
