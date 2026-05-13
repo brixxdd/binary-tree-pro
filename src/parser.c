@@ -484,7 +484,22 @@ void parse_and_execute(char* input) {
     if (strncasecmp(input, "SELECCIONAR", 11) == 0) {
         char* ptr = input + 11;
         ptr = saltar_espacios(ptr);
-        sscanf(ptr, "%49s", tabla);
+
+        // Extraer nombre de tabla — soporta "SELECCIONAR * FROM tabla" o "SELECCIONAR tabla"
+        char tabla[50];
+        memset(tabla, 0, sizeof(tabla));
+
+        if (strncmp(ptr, "*", 1) == 0) {
+            // Formato: SELECCIONAR * FROM tabla
+            char* from_ptr = strcasestr(ptr, "FROM");
+            if (from_ptr) {
+                char* tabla_ptr = from_ptr + 4;
+                tabla_ptr = saltar_espacios(tabla_ptr);
+                sscanf(tabla_ptr, "%49s", tabla);
+            }
+        } else {
+            sscanf(ptr, "%49s", tabla);
+        }
 
         if (db_actual && table_exists(db_actual, tabla)) {
             // FASE 2.1: El hook automático era demasiado lento para uso interactivo normal.
@@ -591,6 +606,85 @@ void parse_and_execute(char* input) {
             }
         } else {
             printf("Uso: ELIMINAR <tabla> <id>\n");
+        }
+        return;
+    }
+    else if (strncasecmp(input, "ACTUALIZAR", 10) == 0) {
+        char* ptr = input + 10;
+        ptr = saltar_espacios(ptr);
+
+        char tabla[50] = {0};
+        char campo[50] = {0};
+        char nuevo_valor[100] = {0};
+        int id = 0;
+
+        // Pattern 1: ACTUALIZAR <tabla> SET <campo> = <valor> WHERE id = <id>
+        // Pattern 2: ACTUALIZAR <tabla> <campo> a <valor> donde id es <id>
+
+        char* set_ptr = strcasestr(ptr, "SET");
+        char* where_ptr = strcasestr(ptr, "WHERE");
+
+        if (set_ptr && where_ptr) {
+            // Pattern 1
+            sscanf(ptr, "%49s", tabla);
+
+            char* campo_start = set_ptr + 3;
+            while (*campo_start && isspace(*campo_start)) campo_start++;
+            sscanf(campo_start, "%49s", campo);
+
+            char* igual_pos = strchr(campo_start, '=');
+            if (igual_pos) {
+                char valor_tmp[100] = {0};
+                sscanf(igual_pos + 1, "%99s", valor_tmp);
+                strncpy(nuevo_valor, valor_tmp, 99);
+            }
+
+            char* id_start = where_ptr + 5;
+            while (*id_start && isspace(*id_start)) id_start++;
+            while (*id_start && !isdigit(*id_start)) id_start++;
+            if (sscanf(id_start, "%d", &id) != 1) {
+                printf("Uso: ACTUALIZAR <tabla> SET <campo> = <valor> WHERE id = <id>\n");
+                return;
+            }
+        } else {
+            // Pattern 2: ACTUALIZAR <tabla> <campo> a <valor> donde id es <id>
+            if (sscanf(ptr, "%49s %49s", tabla, campo) != 2) {
+                printf("Uso: ACTUALIZAR <tabla> <campo> a <valor> donde id es <id>\n");
+                return;
+            }
+
+            char* donde_ptr = strcasestr(ptr, "donde");
+            if (donde_ptr) {
+                char* id_start = donde_ptr + 5;
+                while (*id_start && (isspace(*id_start) || *id_start == 'i' || *id_start == 'd' || *id_start == 'e' || *id_start == 's')) id_start++;
+                sscanf(id_start, "%d", &id);
+
+                char* a_ptr = strcasestr(ptr, " a ");
+                if (a_ptr) {
+                    char* val_start = a_ptr + 3;
+                    while (*val_start && isspace(*val_start)) val_start++;
+                    sscanf(val_start, "%99s", nuevo_valor);
+                }
+            }
+        }
+
+        if (strlen(tabla) == 0 || strlen(campo) == 0 || strlen(nuevo_valor) == 0 || id == 0) {
+            printf("Uso: ACTUALIZAR <tabla> SET <campo> = <valor> WHERE id = <id>\n");
+            return;
+        }
+
+        if (db_actual && table_exists(db_actual, tabla)) {
+            int result = actualizar_registro_dinamico(db_actual, tabla, id, campo, nuevo_valor);
+            if (result == 0) {
+                printf("=> Registro %d actualizado en '%s': %s = %s\n", id, tabla, campo, nuevo_valor);
+                if (esta_en_transaccion()) {
+                    registrar_en_log(tabla, id, OP_UPDATE, "previos", nuevo_valor);
+                }
+            } else {
+                imprimir_error();
+            }
+        } else {
+            printf("Error: Tabla '%s' no existe.\n", tabla);
         }
         return;
     }
@@ -705,9 +799,12 @@ void parse_and_execute(char* input) {
             "ELIMINAR <tabla> <id>, INICIAR TRANSACCION, CONFIRMAR, DESHACER, "
             "CREAR INDICE <tabla> <campo>, VER INDICES, ELIMINAR INDICE <tabla> <campo>, "
             "EXPLICAR CONSULTA <query>, SUGERIR INDICES, AUTO INDEXAR ON/OFF. "
-            "El usuario pregunta: %s", input);
+            "Traduce la pregunta del usuario a UN comando SQL del motor. "
+            "Responde SOLO con el comando SQL a ejecutar, sin explicaciones ni preguntas. "
+            "Ejemplo: 'Cuantos estudiantes hay' -> 'CONTAR estudiantes' "
+            "Usuario: %s", input);
         const char * response = llm_think(prompt);
-        printf("\n[CONSCIENCE]\n%s\n\n", response);
+        printf("\n[CONSCIENCE NL] %s\n\n", response);
         return;
     }
 

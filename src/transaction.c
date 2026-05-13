@@ -89,6 +89,8 @@ void registrar_en_log(const char* tabla, int id, OperacionLog operacion, const c
         fprintf(f, "INSERT|%s|%s\n", tabla, datos_nuevos);
     } else if (operacion == OP_DELETE && datos_previos) {
         fprintf(f, "DELETE|%s|%d|%s\n", tabla, id, datos_previos);
+    } else if (operacion == OP_UPDATE && datos_previos && datos_nuevos) {
+        fprintf(f, "UPDATE|%s|%d|%s|%s\n", tabla, id, datos_previos, datos_nuevos);
     }
     fclose(f);
 }
@@ -158,6 +160,39 @@ void deshacer_transaccion(void) {
                     fclose(tmp);
                     rename("data/.undo_tmp", ruta);
                     printf("  (undo INSERT en '%s')\n", tabla);
+                } else {
+                    if (f) fclose(f);
+                    if (tmp) fclose(tmp);
+                }
+            }
+        } else if (strncmp(copia, "UPDATE|", 7) == 0) {
+            char* ptr = copia + 7;
+            char tabla[50], id_str[20], datos_previos[MAX_LINEA], datos_nuevos[MAX_LINEA];
+            if (sscanf(ptr, "%49[^|]|%19[^|]|%[^*]|%[^\n]", tabla, id_str, datos_previos, datos_nuevos) == 4) {
+                int id_undo = atoi(id_str);
+                char ruta[256];
+                construir_ruta_tabla(tx_db_nombre, tabla, ruta, sizeof(ruta));
+
+                FILE* f = fopen(ruta, "r");
+                FILE* tmp = fopen("data/.undo_tmp", "w");
+                if (f && tmp) {
+                    char l[MAX_LINEA];
+                    while (fgets(l, sizeof(l), f)) {
+                        size_t l_len = strlen(l);
+                        while (l_len > 0 && (l[l_len-1] == '\n' || l[l_len-1] == '\r')) {
+                            l[l_len-1] = '\0';
+                            l_len--;
+                        }
+                        if (strncmp(l, id_str, strlen(id_str)) == 0 && l[strlen(id_str)] == '|') {
+                            fprintf(tmp, "%s\n", datos_previos);
+                        } else {
+                            fprintf(tmp, "%s\n", l);
+                        }
+                    }
+                    fclose(f);
+                    fclose(tmp);
+                    rename("data/.undo_tmp", ruta);
+                    printf("  (undo UPDATE en '%s' id %d)\n", tabla, id_undo);
                 } else {
                     if (f) fclose(f);
                     if (tmp) fclose(tmp);

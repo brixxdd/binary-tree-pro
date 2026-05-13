@@ -7,7 +7,8 @@
 
 typedef enum {
     OP_INSERT,
-    OP_DELETE
+    OP_DELETE,
+    OP_UPDATE
 } OperacionLog;
 
 void iniciar_transaccion(void);

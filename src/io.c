@@ -356,3 +356,108 @@ int eliminar_registro_dinamico(const char* db, const char* tabla, int id) {
         return -1;
     }
 }
+
+int actualizar_registro_dinamico(const char* db, const char* tabla, int id, const char* campo, const char* nuevo_valor) {
+    DefinicionTabla def;
+    if (cargar_metadatos_tabla(db, tabla, &def) != 0) {
+        ultimo_error = ERR_TABLA_NO_EXISTE;
+        return -1;
+    }
+
+    int idx_campo = -1;
+    for (int i = 0; i < def.num_campos; i++) {
+        if (strcasecmp(def.campos[i].nombre, campo) == 0) {
+            idx_campo = i;
+            break;
+        }
+    }
+    if (idx_campo < 0) {
+        ultimo_error = ERR_CAMPO_NO_ENCONTRADO;
+        return -1;
+    }
+
+    char ruta[256];
+    construir_ruta_tabla(db, tabla, ruta, sizeof(ruta));
+
+    char ruta_tmp[300];
+    snprintf(ruta_tmp, sizeof(ruta_tmp), "%s.tmp", ruta);
+
+    FILE* f_orig = fopen(ruta, "r");
+    if (!f_orig) {
+        ultimo_error = ERR_ARCHIVO_NO_ENCONTRADO;
+        return -1;
+    }
+
+    FILE* f_tmp = fopen(ruta_tmp, "w");
+    if (!f_tmp) {
+        fclose(f_orig);
+        return -1;
+    }
+
+    char linea[MAX_LINEA];
+    int linea_actualizada = 0;
+
+    while (fgets(linea, sizeof(linea), f_orig)) {
+        size_t len = strlen(linea);
+        while (len > 0 && (linea[len-1] == '\n' || linea[len-1] == '\r')) {
+            linea[len-1] = '\0';
+            len--;
+        }
+        if (len == 0) continue;
+
+        int first_pipe = -1;
+        for (int i = 0; i < (int)len; i++) {
+            if (linea[i] == '|') {
+                first_pipe = i;
+                break;
+            }
+        }
+
+        if (first_pipe > 0) {
+            linea[first_pipe] = '\0';
+            int id_linea = atoi(linea);
+            linea[first_pipe] = '|';
+
+            if (id_linea == id) {
+                char* campos[MAX_CAMPOS];
+                int num_campos = 0;
+                char temp[1024];
+                strncpy(temp, linea, sizeof(temp) - 1);
+                temp[sizeof(temp) - 1] = '\0';
+
+                char* saveptr;
+                char* token = strtok_r(temp, "|", &saveptr);
+                while (token && num_campos < MAX_CAMPOS) {
+                    campos[num_campos++] = token;
+                    token = strtok_r(NULL, "|", &saveptr);
+                }
+
+                if (idx_campo < num_campos) {
+                    campos[idx_campo] = (char*)nuevo_valor;
+                }
+
+                for (int i = 0; i < num_campos; i++) {
+                    fprintf(f_tmp, "%s", campos[i]);
+                    if (i < num_campos - 1) fprintf(f_tmp, "|");
+                }
+                fprintf(f_tmp, "\n");
+                linea_actualizada = 1;
+                continue;
+            }
+        }
+
+        fprintf(f_tmp, "%s\n", linea);
+    }
+
+    fclose(f_orig);
+    fclose(f_tmp);
+
+    if (linea_actualizada) {
+        rename(ruta_tmp, ruta);
+        return 0;
+    } else {
+        remove(ruta_tmp);
+        ultimo_error = ERR_ID_NO_ENCONTRADO;
+        return -1;
+    }
+}
