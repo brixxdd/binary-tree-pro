@@ -68,47 +68,10 @@ void confirmar_transaccion(void) {
     }
 
     const char* path = tx_log_path();
-    FILE* log = fopen(path, "r");
-    if (!log) {
-        printf("Error: No se pudo abrir log de transaccion.\n");
-        en_transaccion = 0;
-        tx_db_nombre[0] = '\0';
-        return;
-    }
-
-    char linea[MAX_LINEA];
-    while (fgets(linea, sizeof(linea), log)) {
-        size_t len = strlen(linea);
-        while (len > 0 && (linea[len-1] == '\n' || linea[len-1] == '\r')) {
-            linea[len-1] = '\0';
-            len--;
-        }
-        if (linea[0] == '#' || len == 0) continue;
-
-        if (strncmp(linea, "INSERT|", 7) == 0) {
-            char* ptr = linea + 7;
-            char tabla[50], datos[MAX_LINEA];
-            if (sscanf(ptr, "%49[^|]|%[^\n]", tabla, datos) == 2) {
-                char* valores[MAX_CAMPOS];
-                char copia[MAX_LINEA];
-                strncpy(copia, datos, MAX_LINEA - 1);
-                copia[MAX_LINEA - 1] = '\0';
-
-                int num_vals = 0;
-                char* token = strtok(copia, "|");
-                while (token && num_vals < MAX_CAMPOS) {
-                    valores[num_vals] = strdup(token);
-                    num_vals++;
-                    token = strtok(NULL, "|");
-                }
-
-                escribir_registro_dinamico(tx_db_nombre, tabla, valores, num_vals);
-                for (int j = 0; j < num_vals; j++) free(valores[j]);
-            }
-        }
-    }
-    fclose(log);
-
+    
+    // As inserts are already written to the main table during the transaction
+    // (and the log is only used for UNDO operations), committing simply 
+    // means deleting the rollback log so changes become permanent.
     unlink(path);
     en_transaccion = 0;
     tx_db_nombre[0] = '\0';

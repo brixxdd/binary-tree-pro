@@ -1,0 +1,91 @@
+# CONSCIENCE STUDIO — Comandos del Motor C
+
+## Gestion de Bases de Datos
+```
+CREAR BASE DE DATOS <nombre>
+ELIMINAR BASE DE DATOS <nombre>
+RENOMBRAR BASE DE DATOS <nombre> A <nuevo_nombre>
+MOSTRAR BASES DE DATOS
+USAR <nombre_base>
+```
+
+## Gestion de Tablas
+```
+CREAR TABLA <nombre> (campo1:tipo, campo2:tipo, ...)
+  Tipos: INT, FLOAT, STRING[n]
+ELIMINAR TABLA <nombre>
+MOSTRAR TABLAS
+```
+
+## CRUD (Registros)
+```
+INSERTAR <tabla> (valor1, valor2, ...)
+SELECCIONAR * FROM <tabla>
+SELECCIONAR * FROM <tabla> WHERE campo = valor
+ELIMINAR <tabla> <id>
+```
+
+## Transacciones
+```
+INICIAR TRANSACCION (o INICIAR)
+CONFIRMAR
+DESHACER
+```
+
+## Indices
+```
+CREAR INDICE <tabla> <campo>
+VER INDICES
+ELIMINAR INDICE <tabla> <campo>
+```
+
+## Natural Language (Conscience)
+```
+BUSCAR <tabla> donde <campo> <es|es mayor|es menor> <valor>
+CONTAR <tabla> donde <condicion>
+MOSTRAR <tabla> donde <condicion>
+TOP <n> <tabla> por <campo>
+```
+
+## Conscience (AI)
+```
+QUIEN SOS
+AYUDA CONSCIENCE
+EXPLICAR CONSULTA <query>
+SUGERIR INDICES
+AUTO INDEXAR ON/OFF
+VER ANALYTICS
+```
+
+## Ejemplos de Uso
+
+```sql
+-- Crear base y tabla
+CREAR BASE DE DATOS escuela
+USAR escuela
+CREAR TABLA estudiantes (id:INT, nombre:STRING[100], promedio:FLOAT)
+
+-- Insertar datos
+INSERTAR estudiantes (1, Juan Perez, 8.5)
+INSERTAR estudiantes (2, Ana Gomez, 8.0)
+
+-- Buscar con condiciones
+BUSCAR estudiantes donde promedio es mayor 7.0
+SELECCIONAR * FROM estudiantes WHERE nombre = Juan Perez
+
+-- Ver datos
+SELECCIONAR * FROM estudiantes
+
+-- Indexar
+CREAR INDICE estudiantes nombre
+
+-- Transacciones
+INICIAR TRANSACCION
+INSERTAR estudiantes (3, Carlos Perez, 7.5)
+DESHACER  -- deshace el insert
+
+-- AI
+EXPLICAR CONSULTA SELECCIONAR * FROM estudiantes WHERE promedio > 7.0
+SUGERIR INDICES
+QUIEN SOS
+```

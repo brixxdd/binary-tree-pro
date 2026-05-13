@@ -437,6 +437,9 @@ function App() {
                           )}
                         </th>
                       ))}
+                      <th style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -448,12 +451,38 @@ function App() {
                       </tr>
                     ) : (
                       explorerData.rows.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <tr key={i} className="table-row-hover" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
                           {row.map((cell, j) => (
                             <td key={j} style={{ padding: '16px', fontSize: '14px', fontFamily: 'var(--font-mono)' }}>
                               {cell}
                             </td>
                           ))}
+                          <td style={{ padding: '16px' }}>
+                            <button 
+                              onClick={() => {
+                                setQueryInput(`ELIMINAR ${explorerData.table} ${row[0]}`);
+                                setActiveTab('chat');
+                                setTimeout(() => handleExecute(), 100);
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid rgba(255, 69, 58, 0.3)',
+                                borderRadius: '4px',
+                                color: '#ff453a',
+                                cursor: 'pointer',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 69, 58, 0.1)'; e.currentTarget.style.borderColor = '#ff453a'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255, 69, 58, 0.3)'; }}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}

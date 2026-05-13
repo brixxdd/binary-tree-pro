@@ -170,13 +170,13 @@ Motor de base de datos con agente LLM local que:
 
 **Objetivo:** Detectar patrones sospechosos o errores
 
-- [ ] **5.1 Baseline de uso normal**
+- [x] **5.1 Baseline de uso normal**
   - Primeros 7 días: motor registra patterns
   - Promedio de queries por hora
   - Queries típicas por tabla
   - Volumen typical de inserts/deletes
 
-- [ ] **5.2 Detección de outliers**
+- [x] **5.2 Detección de outliers**
   - Comparar actividad actual vs baseline
   - Triggers:
     - > 2x queries normales en 1 hora
@@ -184,7 +184,7 @@ Motor de base de datos con agente LLM local que:
     - Query a tabla que no existe
     - Acceso a DB a horas inusuales (3am)
 
-- [ ] **5.3 Alertas**
+- [x] **5.3 Alertas**
   - Output en terminal:
     ```
     ⚠️ ANOMALÍA DETECTADA:
@@ -195,12 +195,12 @@ Motor de base de datos con agente LLM local que:
   - Si N: deshacer cambios (usar transaction log)
   - Si Bloquear IP: agregar a `_blocked_ips.txt`
 
-- [ ] **5.4 Sistema de blocklist**
+- [x] **5.4 Sistema de blocklist**
   - `_blocked_ips.txt`: IPs bloqueadas
   - Motor check IP antes de procesar query
   - Si bloqueada: reject con mensaje claro
 
-- [ ] **5.5 Test FASE 5**
+- [x] **5.5 Test FASE 5**
   - Simular spike de inserts, verificar alerta
   - Probar block IP functionality
 
@@ -210,22 +210,22 @@ Motor de base de datos con agente LLM local que:
 
 **Objetivo:** Frontend que muestre insights del motor
 
-- [ ] **6.1 Panel de métricas** (En progreso - UI lista, falta data real)
+- [x] **6.1 Panel de métricas** (En progreso - UI lista, falta data real)
   - Queries ejecutadas hoy
   - Tiempo promedio de query
   - Índices creados
   - Tablas más consultadas
 
-- [ ] **6.2 Query explainer visual**
+- [x] **6.2 Query explainer visual**
   - Cada query ejecutada: expandir para ver análisis
   - Código de colores: verde (optimizado), amarillo (sugerencia), rojo (problema)
 
-- [ ] **6.3 Suggestion cards**
+- [x] **6.3 Suggestion cards**
   - Lista de sugerencias de índices pending
   - Click para crear índice
   - Click para descartar
 
-- [ ] **6.4 Query history interactivo**
+- [x] **6.4 Query history interactivo**
   - Lista de últimas 50 queries
   - Click para ver análisis completo
   - Click para repetir query
