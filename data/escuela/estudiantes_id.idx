@@ -1,0 +1,4 @@
+# Index on estudiantes.id
+tabla:estudiantes
+campo:id
+tipo:btree

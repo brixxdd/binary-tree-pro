@@ -1,4 +1,0 @@
-# Index on estudiantes.nombre
-tabla:estudiantes
-campo:nombre
-tipo:btree

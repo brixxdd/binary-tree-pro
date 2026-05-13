@@ -1,0 +1,8 @@
+# Schema for table: examenes
+nombre:examenes
+modo:1
+num_campos:4
+campo:id|0|4
+campo:materia|2|50
+campo:fecha|2|50
+campo:nota|1|4

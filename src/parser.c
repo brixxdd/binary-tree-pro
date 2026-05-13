@@ -694,5 +694,22 @@ void parse_and_execute(char* input) {
         return;
     }
 
+    // NL routing: si no matchea comando conocido y LLM disponible, delegar a IA
+    if (llm_is_initialized()) {
+        char prompt[2048];
+        snprintf(prompt, sizeof(prompt),
+            "Eres MOTOR CONSCIENCE, asistente de IA para motor de base de datos en español. "
+            "Comandos disponibles: MOSTRAR BASES DE DATOS, USAR <db>, CREAR BASE DE DATOS <db>, "
+            "MOSTRAR TABLAS, CREAR TABLA <tabla>(campos), INSERTAR <tabla>(valores), "
+            "SELECCIONAR * FROM <tabla>, SELECCIONAR * FROM <tabla> WHERE condicion, "
+            "ELIMINAR <tabla> <id>, INICIAR TRANSACCION, CONFIRMAR, DESHACER, "
+            "CREAR INDICE <tabla> <campo>, VER INDICES, ELIMINAR INDICE <tabla> <campo>, "
+            "EXPLICAR CONSULTA <query>, SUGERIR INDICES, AUTO INDEXAR ON/OFF. "
+            "El usuario pregunta: %s", input);
+        const char * response = llm_think(prompt);
+        printf("\n[CONSCIENCE]\n%s\n\n", response);
+        return;
+    }
+
     printf("Error: Comando '%s' no reconocido.\n", input);
 }

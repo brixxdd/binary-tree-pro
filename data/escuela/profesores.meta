@@ -1,0 +1,8 @@
+# Schema for table: profesores
+nombre:profesores
+modo:1
+num_campos:4
+campo:id|0|4
+campo:nombre|2|50
+campo:especialidad|2|50
+campo:telefono|2|50
