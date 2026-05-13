@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0e1a"/>
+      <stop offset="100%" style="stop-color:#0d1220"/>
+    </linearGradient>
+
+    <!-- Icon core glow -->
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00e5ff;stop-opacity:0.9"/>
+      <stop offset="60%" style="stop-color:#0066ff;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#0a0e1a;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Neural ring gradient -->
+    <linearGradient id="ringGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00e5ff"/>
+      <stop offset="50%" style="stop-color:#0055ff"/>
+      <stop offset="100%" style="stop-color:#7700ff"/>
+    </linearGradient>
+
+    <linearGradient id="ringGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7700ff;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:0.1"/>
+    </linearGradient>
+
+    <!-- Text gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e8f4ff"/>
+      <stop offset="60%" style="stop-color:#c8deff"/>
+      <stop offset="100%" style="stop-color:#8abaff"/>
+    </linearGradient>
+
+    <!-- Accent text gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00e5ff"/>
+      <stop offset="100%" style="stop-color:#0088ff"/>
+    </linearGradient>
+
+    <!-- Glow filter -->
+    <filter id="glowBlue" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="glowStrong" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="textGlow" x="-10%" y="-30%" width="120%" height="160%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <clipPath id="iconClip">
+      <circle cx="80" cy="80" r="62"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="480" height="160" fill="url(#bgGrad)" rx="12"/>
+
+  <!-- Subtle grid overlay -->
+  <g opacity="0.04">
+    <line x1="0" y1="40" x2="480" y2="40" stroke="#00e5ff" stroke-width="0.5"/>
+    <line x1="0" y1="80" x2="480" y2="80" stroke="#00e5ff" stroke-width="0.5"/>
+    <line x1="0" y1="120" x2="480" y2="120" stroke="#00e5ff" stroke-width="0.5"/>
+    <line x1="120" y1="0" x2="120" y2="160" stroke="#00e5ff" stroke-width="0.5"/>
+    <line x1="240" y1="0" x2="240" y2="160" stroke="#00e5ff" stroke-width="0.5"/>
+    <line x1="360" y1="0" x2="360" y2="160" stroke="#00e5ff" stroke-width="0.5"/>
+  </g>
+
+  <!-- ═══ ICON AREA (left 160px) ═══ -->
+
+  <!-- Outer atmosphere glow -->
+  <circle cx="80" cy="80" r="58" fill="url(#coreGlow)" opacity="0.15"/>
+
+  <!-- Outer ring - dashed orbital -->
+  <circle cx="80" cy="80" r="55" fill="none" stroke="url(#ringGrad1)" stroke-width="1" stroke-dasharray="6 3" opacity="0.5"/>
+
+  <!-- Middle ring -->
+  <circle cx="80" cy="80" r="44" fill="none" stroke="#0055ff" stroke-width="0.8" opacity="0.4"/>
+
+  <!-- Database cylinder body -->
+  <!-- Top ellipse of cylinder -->
+  <ellipse cx="80" cy="62" rx="22" ry="7" fill="none" stroke="url(#ringGrad1)" stroke-width="1.5" filter="url(#glowBlue)"/>
+  <!-- Cylinder walls -->
+  <line x1="58" y1="62" x2="58" y2="98" stroke="#1a3a6a" stroke-width="1.5"/>
+  <line x1="102" y1="62" x2="102" y2="98" stroke="#1a3a6a" stroke-width="1.5"/>
+  <!-- Middle ellipse (second tier) -->
+  <ellipse cx="80" cy="74" rx="22" ry="7" fill="none" stroke="#0044bb" stroke-width="1" opacity="0.6"/>
+  <!-- Bottom ellipse -->
+  <ellipse cx="80" cy="98" rx="22" ry="7" fill="none" stroke="url(#ringGrad1)" stroke-width="1.5" filter="url(#glowBlue)"/>
+  <!-- Fill inside cylinder -->
+  <path d="M58,62 Q80,69 102,62 L102,98 Q80,105 58,98 Z" fill="#0a1a40" opacity="0.7"/>
+
+  <!-- Neural nodes on cylinder -->
+  <circle cx="80" cy="62" r="2.5" fill="#00e5ff" filter="url(#glowBlue)"/>
+  <circle cx="80" cy="74" r="2" fill="#0088ff" opacity="0.8"/>
+  <circle cx="80" cy="98" r="2.5" fill="#00e5ff" filter="url(#glowBlue)"/>
+
+  <!-- Neural connections emanating outward -->
+  <!-- Top connections -->
+  <line x1="80" y1="60" x2="64" y2="46" stroke="#00e5ff" stroke-width="1" opacity="0.6"/>
+  <line x1="80" y1="60" x2="96" y2="46" stroke="#00e5ff" stroke-width="1" opacity="0.6"/>
+  <line x1="80" y1="60" x2="80" y2="42" stroke="#00c0dd" stroke-width="1" opacity="0.5"/>
+
+  <!-- Lateral connections -->
+  <line x1="58" y1="80" x2="42" y2="72" stroke="#0066ff" stroke-width="1" opacity="0.5"/>
+  <line x1="58" y1="80" x2="42" y2="88" stroke="#0066ff" stroke-width="1" opacity="0.5"/>
+  <line x1="102" y1="80" x2="118" y2="72" stroke="#0066ff" stroke-width="1" opacity="0.5"/>
+  <line x1="102" y1="80" x2="118" y2="88" stroke="#0066ff" stroke-width="1" opacity="0.5"/>
+
+  <!-- Bottom connections -->
+  <line x1="80" y1="100" x2="64" y2="114" stroke="#00e5ff" stroke-width="1" opacity="0.6"/>
+  <line x1="80" y1="100" x2="96" y2="114" stroke="#00e5ff" stroke-width="1" opacity="0.6"/>
+  <line x1="80" y1="100" x2="80" y2="118" stroke="#00c0dd" stroke-width="1" opacity="0.5"/>
+
+  <!-- Outer neural nodes -->
+  <circle cx="64" cy="46" r="2" fill="#00e5ff" opacity="0.8" filter="url(#glowBlue)"/>
+  <circle cx="96" cy="46" r="2" fill="#00e5ff" opacity="0.8" filter="url(#glowBlue)"/>
+  <circle cx="80" cy="42" r="2" fill="#7700ff" opacity="0.9" filter="url(#glowBlue)"/>
+  <circle cx="42" cy="72" r="1.8" fill="#0088ff" opacity="0.8"/>
+  <circle cx="42" cy="88" r="1.8" fill="#0088ff" opacity="0.8"/>
+  <circle cx="118" cy="72" r="1.8" fill="#0088ff" opacity="0.8"/>
+  <circle cx="118" cy="88" r="1.8" fill="#0088ff" opacity="0.8"/>
+  <circle cx="64" cy="114" r="2" fill="#00e5ff" opacity="0.8" filter="url(#glowBlue)"/>
+  <circle cx="96" cy="114" r="2" fill="#00e5ff" opacity="0.8" filter="url(#glowBlue)"/>
+  <circle cx="80" cy="118" r="2" fill="#7700ff" opacity="0.9" filter="url(#glowBlue)"/>
+
+  <!-- Cross-connections between outer nodes -->
+  <line x1="64" y1="46" x2="42" y2="72" stroke="#0033aa" stroke-width="0.8" opacity="0.3"/>
+  <line x1="96" y1="46" x2="118" y2="72" stroke="#0033aa" stroke-width="0.8" opacity="0.3"/>
+  <line x1="64" y1="114" x2="42" y2="88" stroke="#0033aa" stroke-width="0.8" opacity="0.3"/>
+  <line x1="96" y1="114" x2="118" y2="88" stroke="#0033aa" stroke-width="0.8" opacity="0.3"/>
+
+  <!-- Inner glow pulse ring -->
+  <circle cx="80" cy="80" r="30" fill="none" stroke="#00e5ff" stroke-width="0.5" opacity="0.2"/>
+
+  <!-- Bright core pulse -->
+  <circle cx="80" cy="80" r="5" fill="#00e5ff" opacity="0.15" filter="url(#glowStrong)"/>
+  <circle cx="80" cy="80" r="2" fill="#00e5ff" opacity="0.5"/>
+
+  <!-- Separator line -->
+  <line x1="155" y1="24" x2="155" y2="136" stroke="#1a2e55" stroke-width="1"/>
+
+  <!-- ═══ TEXT AREA ═══ -->
+
+  <!-- "Conscience" main title -->
+  <text x="175" y="74"
+    font-family="'Courier New', 'Lucida Console', monospace"
+    font-size="32"
+    font-weight="700"
+    letter-spacing="2"
+    fill="url(#textGrad)"
+    filter="url(#textGlow)">Conscience</text>
+
+  <!-- "Studio" subtitle with accent -->
+  <text x="177" y="104"
+    font-family="'Courier New', 'Lucida Console', monospace"
+    font-size="19"
+    font-weight="400"
+    letter-spacing="9"
+    fill="url(#accentGrad)"
+    opacity="0.9">STUDIO</text>
+
+  <!-- Tagline -->
+  <text x="177" y="124"
+    font-family="'Courier New', monospace"
+    font-size="8.5"
+    letter-spacing="2.5"
+    fill="#3a6aaa"
+    opacity="0.8">LLM-POWERED DATABASE ENGINE</text>
+
+  <!-- Thin accent line under STUDIO -->
+  <line x1="177" y1="109" x2="430" y2="109" stroke="url(#accentGrad)" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- Corner accents (top-right and bottom-left) -->
+  <path d="M460,10 L470,10 L470,20" fill="none" stroke="#00e5ff" stroke-width="1" opacity="0.4"/>
+  <path d="M10,150 L10,140 L20,140" fill="none" stroke="#00e5ff" stroke-width="1" opacity="0.4"/>
+
+</svg>

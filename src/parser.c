@@ -364,7 +364,9 @@ void parse_and_execute(char* input) {
         sscanf(ptr, "%49s", tabla);
 
         if (db_actual && table_exists(db_actual, tabla)) {
-            // FASE 2.1: Hook automático - analizar query antes de ejecutar
+            // FASE 2.1: El hook automático era demasiado lento para uso interactivo normal.
+            // Se desactivó aquí. Para usar el AI explainer se debe usar "EXPLICAR CONSULTA".
+            /*
             if (llm_is_initialized()) {
                 char prompt[1024];
                 snprintf(prompt, sizeof(prompt),
@@ -377,6 +379,7 @@ void parse_and_execute(char* input) {
                 const char * analysis = llm_think(prompt);
                 printf("\n[CONSCIENCE] %s\n\n", analysis);
             }
+            */
             struct timeval start, end;
             gettimeofday(&start, NULL);
             

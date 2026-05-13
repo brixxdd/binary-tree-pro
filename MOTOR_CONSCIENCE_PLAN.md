@@ -210,7 +210,7 @@ Motor de base de datos con agente LLM local que:
 
 **Objetivo:** Frontend que muestre insights del motor
 
-- [ ] **6.1 Panel de métricas**
+- [ ] **6.1 Panel de métricas** (En progreso - UI lista, falta data real)
   - Queries ejecutadas hoy
   - Tiempo promedio de query
   - Índices creados
@@ -230,7 +230,7 @@ Motor de base de datos con agente LLM local que:
   - Click para ver análisis completo
   - Click para repetir query
 
-- [ ] **6.5 Chat con Conscience**
+- [x] **6.5 Chat con Conscience** (¡Completado! Integrado vía Tauri)
   - Input para preguntar al motor en lenguaje natural
   - "Por qué esta query es lenta?"
   - "Qué índices me recomiendas?"
