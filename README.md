@@ -133,7 +133,7 @@ SELECCIONAR estudiantes
 # 12. Eliminar tabla y base de datos
 ELIMINAR TABLA estudiantes
 MOSTRAR TABLAS
-ELIMINAR BASE DE DATOS escuela
+ELIMINAR BASE DE DATOS nums
 MOSTRAR BASES DE DATOS
 
 # 13. Salir

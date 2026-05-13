@@ -1,6 +1,0 @@
-# Schema for table: nums
-nombre:nums
-modo:1
-num_campos:2
-campo:id|0|4
-campo:valor|2|20

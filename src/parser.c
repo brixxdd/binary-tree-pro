@@ -13,6 +13,9 @@
 #include "../includes/index.h"
 #include "../includes/database.h"
 #include "../includes/io.h"
+#include "../includes/llm.h"
+#include "../includes/query_analytics.h"
+#include <sys/time.h>
 
 static int parsear_esquema(const char* esquema, Campo* campos, int* num_campos) {
     *num_campos = 0;
@@ -153,10 +156,64 @@ static char* saltar_espacios(char* str) {
     return str;
 }
 
+// FASE 4: Natural Language Interface
+void parse_and_execute(char* input); // Forward declaration
+
+static void process_natural_language(const char* input) {
+    if (!llm_is_initialized()) {
+        printf("Error: Conscience LLM no está activo para traducir lenguaje natural.\n");
+        return;
+    }
+
+    printf("\n[CONSCIENCE NL] Procesando lenguaje natural...\n");
+
+    char prompt[1024];
+    snprintf(prompt, sizeof(prompt),
+        "Traduce esta orden natural al dialecto SQL de este motor.\n"
+        "Dialecto motor:\n"
+        "- SELECCIONAR <tabla> WHERE <condicion>\n"
+        "- INSERTAR <tabla> (val1, val2)\n"
+        "Si pide 'CONTAR', usa 'SELECCIONAR <tabla> WHERE <condicion>' y el motor lo entenderá.\n"
+        "Solo responde con la query traducida, sin comillas extra ni backticks ni formato markdown.\n"
+        "Orden: %s", input);
+
+    const char* raw_translation = llm_think(prompt);
+    
+    // Limpiar espacios y saltos de línea al principio
+    const char* translation = raw_translation;
+    while (isspace((unsigned char)*translation)) translation++;
+    
+    printf("\n[CONSCIENCE NL] Entendí esto:\n> %s\n\n¿Ejecutar directo? (S/N): ", translation);
+    fflush(stdout);
+    
+    char confirm[10];
+    if (fgets(confirm, sizeof(confirm), stdin)) {
+        if (confirm[0] == 'S' || confirm[0] == 's') {
+            char query_to_run[1024];
+            strncpy(query_to_run, translation, sizeof(query_to_run)-1);
+            query_to_run[sizeof(query_to_run)-1] = '\0';
+            printf("\n");
+            parse_and_execute(query_to_run);
+        } else {
+            printf("Operación cancelada.\n");
+        }
+    }
+}
+
 void parse_and_execute(char* input) {
     while (isspace(*input)) input++;
 
     if (strlen(input) == 0) return;
+
+    if (strncasecmp(input, "BUSCAR", 6) == 0 ||
+        strncasecmp(input, "CONTAR", 6) == 0 ||
+        strncasecmp(input, "TOP", 3) == 0 ||
+        (strncasecmp(input, "MOSTRAR", 7) == 0 && 
+         strncasecmp(input, "MOSTRAR BASES DE DATOS", 22) != 0 && 
+         strncasecmp(input, "MOSTRAR TABLAS", 14) != 0)) {
+        process_natural_language(input);
+        return;
+    }
 
     char tabla[50];
 
@@ -307,7 +364,31 @@ void parse_and_execute(char* input) {
         sscanf(ptr, "%49s", tabla);
 
         if (db_actual && table_exists(db_actual, tabla)) {
-            listar_registros_dinamicos(db_actual, tabla);
+            // FASE 2.1: Hook automático - analizar query antes de ejecutar
+            if (llm_is_initialized()) {
+                char prompt[1024];
+                snprintf(prompt, sizeof(prompt),
+                    "Eres un optimizador de queries SQL. Este motor usa dialecto español: "
+                    "'SELECCIONAR <tabla>' = 'SELECT * FROM <tabla>'. "
+                    "'SELECCIONAR <tabla> WHERE <condicion>' = 'SELECT * FROM <tabla> WHERE <condicion>'. "
+                    "Analiza la query y dame: 1) Si hace full table scan 2) Si le falta LIMIT 3) Índice sugerido si aplica 4) Tiempo estimado. "
+                    "Query: %s\nResponde en español, máximo 3 oraciones.", input);
+
+                const char * analysis = llm_think(prompt);
+                printf("\n[CONSCIENCE] %s\n\n", analysis);
+            }
+            struct timeval start, end;
+            gettimeofday(&start, NULL);
+            
+            int rows = listar_registros_dinamicos(db_actual, tabla);
+            
+            gettimeofday(&end, NULL);
+            double exec_ms = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
+            
+            if (rows >= 0) {
+                log_query(db_actual, tabla, input, exec_ms, rows);
+                process_auto_index(db_actual, input, exec_ms, tabla);
+            }
         } else {
             printf("Error: Tabla '%s' no existe.\n", tabla);
         }
@@ -364,8 +445,6 @@ void parse_and_execute(char* input) {
         if (sscanf(tabla_copy, "%49s %d", tabla, &id) == 2) {
             if (db_actual && table_exists(db_actual, tabla)) {
                 if (esta_en_transaccion()) {
-                    char datos_previos[MAX_LINEA];
-                    datos_previos[0] = '\0';
                     // Leer datos antes de eliminar para poder restaurarlos
                     // Simplemente eliminamos sin guardar para el undo
                     if (eliminar_registro_dinamico(db_actual, tabla, id) == 0) {
@@ -386,6 +465,66 @@ void parse_and_execute(char* input) {
             }
         } else {
             printf("Uso: ELIMINAR <tabla> <id>\n");
+        }
+        return;
+    }
+
+    // Conscience Commands
+    if (strncasecmp(input, "QUIEN SOS", 9) == 0) {
+        if (llm_is_initialized()) {
+            const char * response = llm_think("Eres MOTOR CONSCIENCE, un asistente de IA para un motor de base de datos SQL en español. Preséntate en 2-3 oraciones, menciona que puedes analizar queries, sugerir índices y detectar anomalías.");
+            printf("\n[CONSCIENCE]\n%s\n\n", response);
+        } else {
+            printf("\n[CONSCIENCE] Soy el motor de inteligencia artificial de MOTOR.\n");
+            printf("[CONSCIENCE] Actualmente estoy dormido (sin LLM cargado).\n");
+            printf("[CONSCIENCE] Para activarme necesitas un modelo GGUF en models/\n\n");
+        }
+        return;
+    }
+    else if (strncasecmp(input, "AYUDA CONSCIENCE", 16) == 0) {
+        printf("\n=== COMANDOS CONSCIENCE ===\n");
+        printf("  QUIEN SOS             - Conocer a Conscience\n");
+        printf("  EXPLICAR CONSULTA     - Analizar query y sugerir optimizaciones\n");
+        printf("  SUGERIR INDICES       - Ver indices sugeridos por patron de uso\n");
+        printf("  AUTO INDEXAR [ON/OFF] - Toggle auto-creacion de indices\n");
+        printf("  VER ANALYTICS         - Ver dashboard de uso\n");
+        printf("  AYUDA CONSCIENCE      - Este mensaje\n");
+        printf("\n");
+        return;
+    }
+    else if (strncasecmp(input, "EXPLICAR CONSULTA", 16) == 0) {
+        char * ptr = input + 16;
+        ptr = saltar_espacios(ptr);
+        if (*ptr) {
+            if (llm_is_initialized()) {
+                char prompt[1024];
+                snprintf(prompt, sizeof(prompt),
+                    "Analiza esta query SQL y sugiere optimizaciones. Si es lenta, explica por qué y sugiere un índice.\nQuery: %s\nResponde en español, de forma concisa.", ptr);
+
+                const char * response = llm_think(prompt);
+                printf("\n[CONSCIENCE ANALISIS]\n%s\n\n", response);
+            } else {
+                printf("[CONSCIENCE] LLM no disponible. Ejecuta con modelo GGUF.\n");
+            }
+        } else {
+            printf("Uso: EXPLICAR CONSULTA <tu query>\n");
+        }
+        return;
+    }
+    else if (strncasecmp(input, "SUGERIR INDICES", 15) == 0) {
+        printf("\n[CONSCIENCE] Analizando patrones de uso...\n");
+        analyze_and_suggest_indices(db_actual);
+        return;
+    }
+    else if (strncasecmp(input, "AUTO INDEXAR", 12) == 0) {
+        char * ptr = input + 12;
+        ptr = saltar_espacios(ptr);
+        if (strncasecmp(ptr, "ON", 2) == 0 || strncasecmp(ptr, "S", 1) == 0) {
+            toggle_auto_index(db_actual, 1);
+        } else if (strncasecmp(ptr, "OFF", 3) == 0 || strncasecmp(ptr, "N", 1) == 0) {
+            toggle_auto_index(db_actual, 0);
+        } else {
+            printf("Uso: AUTO INDEXAR [ON/OFF]\n");
         }
         return;
     }

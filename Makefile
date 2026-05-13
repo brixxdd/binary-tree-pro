@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -I.
+CFLAGS = -Wall -Wextra -std=gnu99 -D_GNU_SOURCE -I. -I./includes
 TARGET = motor
 SOURCES = motor.c \
           src/errors.c \
@@ -7,7 +7,9 @@ SOURCES = motor.c \
           src/index.c \
           src/database.c \
           src/io.c \
-          src/parser.c
+          src/parser.c \
+          src/llm.c \
+          src/query_analytics.c
 HEADERS = includes/config.h \
           includes/types.h \
           includes/index.h \
@@ -15,14 +17,16 @@ HEADERS = includes/config.h \
           includes/parser.h \
           includes/database.h \
           includes/errors.h \
-          includes/io.h
+          includes/io.h \
+          includes/llm.h \
+          includes/query_analytics.h
 
 .PHONY: all clean run test help
 
 all: $(TARGET)
 
 $(TARGET): $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES) -lm -lpthread
 
 clean:
 	rm -f $(TARGET) *.o
@@ -57,7 +61,7 @@ test: $(TARGET)
 	@printf "CREAR BASE DE DATOS testdb\nUSAR testdb\nCREAR TABLA empleados (id INT, nombre STRING(50), salario FLOAT)\nELIMINAR TABLA empleados\nMOSTRAR TABLAS\nELIMINAR BASE DE DATOS testdb\nMOSTRAR BASES DE DATOS\nSALIR\n" | ./$(TARGET)
 
 help:
-	@echo "Motor de BD v0.3 - Comandos en ESPAÑOL:"
+	@echo "Motor de BD v0.4 - CONSCIENCE EDITION"
 	@echo ""
 	@echo "  Bases de datos:"
 	@echo "    CREAR BASE DE DATOS <nombre>  - Crear base de datos"
@@ -80,6 +84,13 @@ help:
 	@echo "    INICIAR TRANSACCION           - Iniciar transaccion"
 	@echo "    CONFIRMAR                     - Confirmar cambios"
 	@echo "    DESHACER                      - Deshacer cambios"
+	@echo ""
+	@echo "  Conscience (AI):"
+	@echo "    EXPLICAR CONSULTA <query>     - Analizar query y sugerir optimizaciones"
+	@echo "    SUGERIR INDICES               - Ver indices sugeridos por patron de uso"
+	@echo "    AUTO INDEXAR [ON/OFF]         - Toggle auto-creacion de indices"
+	@echo "    VER ANALYTICS                 - Ver dashboard de uso"
+	@echo "    QUIEN SOS                     - Conocer a Conscience"
 	@echo ""
 	@echo "  Utilidades:"
 	@echo "    REINDEXAR <tabla>             - Reconstruir indice"

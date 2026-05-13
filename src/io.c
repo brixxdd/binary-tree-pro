@@ -236,6 +236,7 @@ int listar_registros_dinamicos(const char* db, const char* tabla) {
     printf("\n--- CONTENIDO DE LA TABLA: %s ---\n", tabla);
 
     char linea[MAX_LINEA];
+    int rows_scanned = 0;
     while (fgets(linea, sizeof(linea), f)) {
         size_t len = strlen(linea);
         while (len > 0 && (linea[len-1] == '\n' || linea[len-1] == '\r' || linea[len-1] == ' ')) {
@@ -243,6 +244,8 @@ int listar_registros_dinamicos(const char* db, const char* tabla) {
             len--;
         }
         if (len == 0) continue;
+        
+        rows_scanned++;
 
         int pos = 0;
         int campo_idx = 0;
@@ -280,7 +283,7 @@ int listar_registros_dinamicos(const char* db, const char* tabla) {
     }
 
     fclose(f);
-    return 0;
+    return rows_scanned;
 }
 
 int eliminar_registro_dinamico(const char* db, const char* tabla, int id) {

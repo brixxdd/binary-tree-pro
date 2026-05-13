@@ -10,3 +10,7 @@ a.out
 # Archivos del sistema
 .DS_Store
 Thumbs.db
+llama.cpp/
+models/
+motor
+test_nl

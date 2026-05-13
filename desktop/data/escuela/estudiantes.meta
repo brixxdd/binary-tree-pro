@@ -1,0 +1,7 @@
+# Schema for table: estudiantes
+nombre:estudiantes
+modo:1
+num_campos:3
+campo:id|0|4
+campo:nombre|2|50
+campo:promedio|1|4

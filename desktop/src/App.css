@@ -1,0 +1,219 @@
+/* 
+   CONSCIENCE STUDIO - Design System 
+   Premium iOS Liquid Glassmorphism Dark Mode
+*/
+
+:root {
+  /* Core Palette */
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0c;
+  
+  /* iOS Liquid Glass Tokens */
+  --bg-glass: rgba(30, 30, 35, 0.45);
+  --bg-glass-hover: rgba(45, 45, 50, 0.55);
+  --glass-blur: blur(32px) saturate(200%);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  
+  /* Accents */
+  --accent-primary: #0a84ff; /* iOS Blue */
+  --accent-secondary: #5e5ce6; /* iOS Purple */
+  --accent-gradient: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+  
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+  
+  /* Utilities */
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* Layout Shell with iOS Dynamic Background Feel */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  /* Abstract colorful orbs in the background that blur will distort */
+  background: 
+    radial-gradient(circle at 15% 50%, rgba(94, 92, 230, 0.15), transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(10, 132, 255, 0.15), transparent 40%);
+  background-color: #050505;
+}
+
+/* Sidebar - Liquid Glass */
+.sidebar {
+  width: 260px;
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--glass-border);
+  box-shadow: 1px 0 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  padding: 32px 16px;
+  z-index: 10;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 40px;
+  padding: 0 8px;
+}
+
+.logo-glow {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent-gradient);
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  font-size: 20px;
+}
+
+.sidebar-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  border: 1px solid transparent;
+}
+
+.nav-item:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: rgba(10, 132, 255, 0.15);
+  color: var(--accent-primary);
+  border: 1px solid rgba(10, 132, 255, 0.3);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 48px;
+}
+
+.page-header {
+  margin-bottom: 36px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+/* Dashboard Grid - iOS Liquid Cards */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.glass-card {
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  border-radius: var(--radius-md);
+  padding: 28px;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              box-shadow 0.4s ease, background 0.4s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  background: rgba(45, 45, 50, 0.6);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4), var(--glass-highlight);
+}
+
+.metric-title {
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.metric-value {
+  font-size: 42px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 10px rgba(10, 132, 255, 0.2);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
