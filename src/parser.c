@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <strings.h>
+#include <dirent.h>
 
 #include "../includes/config.h"
 #include "../includes/types.h"
@@ -342,7 +343,13 @@ void parse_and_execute(char* input) {
         }
         return;
     }
-    else if (strncasecmp(input, "INICIAR TRANSACCION", 18) == 0 ||
+
+    char* db_actual = get_database_actual();
+    if (db_actual) {
+        restaurar_estado_transaccion(db_actual);
+    }
+
+    if (strncasecmp(input, "INICIAR TRANSACCION", 18) == 0 ||
              strncasecmp(input, "INICIAR", 8) == 0) {
         iniciar_transaccion();
         return;
@@ -356,7 +363,123 @@ void parse_and_execute(char* input) {
         return;
     }
 
-    char* db_actual = get_database_actual();
+    // --- INDEX MANAGEMENT ---
+    if (strncasecmp(input, "CREAR INDICE", 12) == 0) {
+        char* ptr = input + 12;
+        ptr = saltar_espacios(ptr);
+        char idx_tabla[50], idx_campo[50];
+        if (sscanf(ptr, "%49s %49s", idx_tabla, idx_campo) == 2) {
+            if (!db_actual) {
+                printf("Error: No hay base de datos seleccionada.\n");
+                return;
+            }
+            // Verify table exists
+            if (!table_exists(db_actual, idx_tabla)) {
+                printf("Error: Tabla '%s' no existe.\n", idx_tabla);
+                return;
+            }
+            // Verify field exists in table metadata
+            DefinicionTabla def;
+            if (cargar_metadatos_tabla(db_actual, idx_tabla, &def) != 0) {
+                printf("Error: No se pudo leer metadata de '%s'.\n", idx_tabla);
+                return;
+            }
+            int field_found = 0;
+            for (int i = 0; i < def.num_campos; i++) {
+                if (strcasecmp(def.campos[i].nombre, idx_campo) == 0) {
+                    field_found = 1;
+                    break;
+                }
+            }
+            if (!field_found) {
+                printf("Error: Campo '%s' no existe en tabla '%s'. Campos disponibles: ", idx_campo, idx_tabla);
+                for (int i = 0; i < def.num_campos; i++) {
+                    printf("%s%s", def.campos[i].nombre, i < def.num_campos-1 ? ", " : "\n");
+                }
+                return;
+            }
+            // Create index file
+            char idx_path[512];
+            snprintf(idx_path, sizeof(idx_path), "data/%s/%s_%s.idx", db_actual, idx_tabla, idx_campo);
+            FILE* f = fopen(idx_path, "w");
+            if (f) {
+                fprintf(f, "# Index on %s.%s\n", idx_tabla, idx_campo);
+                fprintf(f, "tabla:%s\n", idx_tabla);
+                fprintf(f, "campo:%s\n", idx_campo);
+                fprintf(f, "tipo:btree\n");
+                fclose(f);
+                printf("=> Indice creado: %s(%s) en base de datos '%s'.\n", idx_tabla, idx_campo, db_actual);
+            } else {
+                printf("Error: No se pudo crear el archivo de indice.\n");
+            }
+        } else {
+            printf("Uso: CREAR INDICE <tabla> <campo>\n");
+        }
+        return;
+    }
+    else if (strncasecmp(input, "VER INDICES", 11) == 0) {
+        char* ptr = input + 11;
+        ptr = saltar_espacios(ptr);
+        char idx_tabla[50];
+        if (sscanf(ptr, "%49s", idx_tabla) == 1) {
+            if (!db_actual) {
+                printf("Error: No hay base de datos seleccionada.\n");
+                return;
+            }
+            char dir_path[512];
+            snprintf(dir_path, sizeof(dir_path), "data/%s", db_actual);
+            DIR* dir = opendir(dir_path);
+            if (dir) {
+                int found = 0;
+                struct dirent* entry;
+                printf("--- INDICES DE TABLA: %s ---\n", idx_tabla);
+                while ((entry = readdir(dir)) != NULL) {
+                    // Match pattern: tabla_campo.idx
+                    char prefix[100];
+                    snprintf(prefix, sizeof(prefix), "%s_", idx_tabla);
+                    if (strncmp(entry->d_name, prefix, strlen(prefix)) == 0 && 
+                        strstr(entry->d_name, ".idx")) {
+                        // Extract field name
+                        char* campo = entry->d_name + strlen(prefix);
+                        char campo_name[50];
+                        strncpy(campo_name, campo, sizeof(campo_name));
+                        char* dot = strstr(campo_name, ".idx");
+                        if (dot) *dot = '\0';
+                        printf("  INDEX: %s(%s)\n", idx_tabla, campo_name);
+                        found++;
+                    }
+                }
+                closedir(dir);
+                if (found == 0) {
+                    printf("  (sin indices)\n");
+                }
+            }
+        } else {
+            printf("Uso: VER INDICES <tabla>\n");
+        }
+        return;
+    }
+    else if (strncasecmp(input, "ELIMINAR INDICE", 15) == 0) {
+        char* ptr = input + 15;
+        ptr = saltar_espacios(ptr);
+        char idx_tabla[50], idx_campo[50];
+        if (sscanf(ptr, "%49s %49s", idx_tabla, idx_campo) == 2) {
+            if (!db_actual) {
+                printf("Error: No hay base de datos seleccionada.\n");
+                return;
+            }
+            char idx_path[512];
+            snprintf(idx_path, sizeof(idx_path), "data/%s/%s_%s.idx", db_actual, idx_tabla, idx_campo);
+            if (remove(idx_path) == 0) {
+                printf("=> Indice eliminado: %s(%s).\n", idx_tabla, idx_campo);
+            } else {
+                printf("Error: Indice %s(%s) no existe.\n", idx_tabla, idx_campo);
+            }
+        } else {
+            printf("Uso: ELIMINAR INDICE <tabla> <campo>\n");
+        }
+        return;
+    }
 
     if (strncasecmp(input, "SELECCIONAR", 11) == 0) {
         char* ptr = input + 11;
@@ -495,14 +618,53 @@ void parse_and_execute(char* input) {
         printf("\n");
         return;
     }
-    else if (strncasecmp(input, "EXPLICAR CONSULTA", 16) == 0) {
-        char * ptr = input + 16;
+    else if (strncasecmp(input, "EXPLICAR CONSULTA", 17) == 0) {
+        char * ptr = input + 17;
         ptr = saltar_espacios(ptr);
         if (*ptr) {
             if (llm_is_initialized()) {
-                char prompt[1024];
+                // Extract table name from query (e.g. "SELECCIONAR estudiantes" -> "estudiantes")
+                char query_tabla[50] = "desconocida";
+                char* qptr = ptr;
+                // Skip leading spaces
+                while (*qptr && isspace(*qptr)) qptr++;
+                // Skip command word (SELECCIONAR, INSERTAR, etc)
+                while (*qptr && !isspace(*qptr)) qptr++;
+                // Skip spaces before table name
+                while (*qptr && isspace(*qptr)) qptr++;
+                if (*qptr) {
+                    sscanf(qptr, "%49s", query_tabla);
+                }
+
+                // Load table schema if we can
+                char campos_info[512] = "desconocidos";
+                if (db_actual && query_tabla[0] && table_exists(db_actual, query_tabla)) {
+                    DefinicionTabla def;
+                    if (cargar_metadatos_tabla(db_actual, query_tabla, &def) == 0) {
+                        int pos = 0;
+                        for (int i = 0; i < def.num_campos && pos < 500; i++) {
+                            pos += snprintf(campos_info + pos, sizeof(campos_info) - pos, 
+                                "%s%s", def.campos[i].nombre, i < def.num_campos-1 ? ", " : "");
+                        }
+                    }
+                }
+
+                char prompt[2048];
                 snprintf(prompt, sizeof(prompt),
-                    "Analiza esta query SQL y sugiere optimizaciones. Si es lenta, explica por qué y sugiere un índice.\nQuery: %s\nResponde en español, de forma concisa.", ptr);
+                    "Eres el optimizador de un motor de base de datos educativo con comandos en ESPAÑOL. "
+                    "Dialecto: SELECCIONAR <tabla> = SELECT * FROM <tabla>. "
+                    "Base de datos: '%s'. Tabla: '%s'. Campos reales: [%s]. "
+                    "Analiza y responde EXACTAMENTE así:\n"
+                    "1) Full scan: sí/no\n"
+                    "2) LIMIT: necesario/no\n"  
+                    "3) Índice: CREAR INDICE %s <campo_real_de_la_lista>\n"
+                    "4) Calificación: VERDE/AMARILLO/ROJO\n"
+                    "IMPORTANTE: En punto 3 SIEMPRE sugiere un índice usando un campo REAL de la lista [%s]. "
+                    "Usa la sintaxis exacta: CREAR INDICE %s nombre_campo\n"
+                    "Query: %s\n"
+                    "Responde en español, máximo 4 líneas.", 
+                    db_actual ? db_actual : "ninguna", query_tabla, campos_info,
+                    query_tabla, campos_info, query_tabla, ptr);
 
                 const char * response = llm_think(prompt);
                 printf("\n[CONSCIENCE ANALISIS]\n%s\n\n", response);

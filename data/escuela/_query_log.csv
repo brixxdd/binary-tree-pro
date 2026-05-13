@@ -9,3 +9,12 @@
 2026-05-13T01:30:14|seleccionar estudiantes|0.05|3|estudiantes
 2026-05-13T07:33:01|seleccionar estudiantes|0.01|1|estudiantes
 2026-05-13T07:43:39|seleccionar estudiantes|0.01|1|estudiantes
+2026-05-13T07:46:17|seleccionar estudiantes|0.02|1|estudiantes
+2026-05-13T07:51:36|seleccionar estudiantes|0.01|1|estudiantes
+2026-05-13T07:54:37|seleccionar estudiantes|0.01|1|estudiantes
+2026-05-13T07:57:54|seleccionar estudiantes WHERE nombre = Leo|0.01|1|estudiantes
+2026-05-13T08:02:07|seleccionar estudiantes WHERE nombre = Leo|0.02|1|estudiantes
+2026-05-13T08:18:54|seleccionar estudiantes WHERE nombre = Leo|0.02|1|estudiantes
+2026-05-13T08:29:07|SELECCIONAR estudiantes|0.02|2|estudiantes
+2026-05-13T08:36:32|SELECCIONAR estudiantes|0.02|3|estudiantes
+2026-05-13T08:37:11|seleccionar estudiantes|0.02|2|estudiantes

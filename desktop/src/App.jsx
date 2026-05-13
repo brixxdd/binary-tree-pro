@@ -12,6 +12,7 @@ function App() {
   // Novedades para Panel y Sidebar
   const [databases, setDatabases] = useState([]);
   const [metrics, setMetrics] = useState({ total_queries: 0, avg_latency_ms: 0 });
+  const [latencyHistory, setLatencyHistory] = useState(Array(15).fill(0));
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'explorer'
   const [explorerData, setExplorerData] = useState(null);
@@ -61,61 +62,27 @@ function App() {
     setActiveTab('chat');
     
     try {
-      // 1. Interceptar comandos de transacción
+      // Detect transaction commands to update UI state, but STILL send to backend
       if (upperQuery === "INICIAR TRANSACCION" || upperQuery === "INICIAR") {
-        if (!currentDb) throw new Error("Selecciona una DB primero (USAR <db>)");
-        setTxSession({ active: true, pending: [] });
-        setChatHistory(prev => [...prev, { role: 'conscience', content: "=> Transaccion iniciada (START TRANSACTION)" }]);
-        setIsProcessing(false);
-        setQueryInput("");
-        return;
+        setTxSession({ active: true });
+      } else if (upperQuery === "CONFIRMAR" || upperQuery === "DESHACER") {
+        setTxSession({ active: false });
       }
 
-      if (upperQuery === "CONFIRMAR") {
-        if (!currentDb) throw new Error("Selecciona una DB primero");
-        setTxSession({ active: false, pending: [] });
-        setChatHistory(prev => [...prev, { role: 'conscience', content: "=> Transaccion confirmada (COMMIT)." }]);
-        setIsProcessing(false);
-        setQueryInput("");
-        return;
-      }
-
-      if (upperQuery === "DESHACER") {
-        if (!currentDb) throw new Error("Selecciona una DB primero");
-        if (!txSession.active) throw new Error("Error: No hay transaccion activa.");
-        
-        for (let i = txSession.pending.length - 1; i >= 0; i--) {
-          const q = txSession.pending[i];
-          if (q.type === 'INSERT') {
-            const idMatch = q.original.match(/INSERTAR\s+\S+\s*\(\s*(\d+)/i);
-            if (idMatch) {
-              const deleteCmd = `ELIMINAR ${q.tabla} ${idMatch[1]}`;
-              await invoke("execute_motor", { query: deleteCmd, db: currentDb });
-            }
-          }
-        }
-        setTxSession({ active: false, pending: [] });
-        setChatHistory(prev => [...prev, { role: 'conscience', content: "=> Transaccion cancelada (ROLLBACK)." }]);
-        setIsProcessing(false);
-        setQueryInput("");
-        return;
-      }
-
-      // 2. Ejecutar la query real
+      // 2. Ejecutar la query real y medir tiempo para el gráfico
+      const startTime = performance.now();
       const result = await invoke("execute_motor", { 
         query: query,
         db: currentDb
       });
+      const endTime = performance.now();
+      const latency = endTime - startTime;
       
-      if (upperQuery.startsWith("INSERTAR") && txSession.active) {
-        const tablaMatch = query.match(/INSERTAR\s+(\S+)/i);
-        if (tablaMatch) {
-          setTxSession(prev => ({
-            ...prev,
-            pending: [...prev.pending, { type: 'INSERT', tabla: tablaMatch[1], original: query }]
-          }));
-        }
-      }
+      // Update latency history array
+      setLatencyHistory(prev => {
+        const newHist = [...prev.slice(1), latency];
+        return newHist;
+      });
 
       if (upperQuery.startsWith("USAR ") && result.includes("Usando base de datos")) {
         const dbName = query.split(" ")[1];
@@ -173,7 +140,49 @@ function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className="app-container" style={{ 
+      display: 'flex', 
+      height: '100vh', 
+      width: '100vw',
+      overflow: 'hidden',
+      background: 'var(--bg-gradient)',
+      transition: 'box-shadow 0.3s ease',
+      boxShadow: txSession.active ? 'inset 0 0 50px rgba(255, 149, 0, 0.4), inset 0 0 10px rgba(255, 149, 0, 0.8)' : 'none',
+      border: txSession.active ? '1px solid rgba(255, 149, 0, 0.8)' : 'none'
+    }}>
+      {/* FLOATING TRANSACTION BAR */}
+      {txSession.active && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(20, 20, 20, 0.9)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 149, 0, 0.5)',
+          borderRadius: '20px',
+          padding: '10px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          zIndex: 1000,
+          boxShadow: '0 10px 30px rgba(255, 149, 0, 0.2)'
+        }}>
+          <div style={{ color: '#ff9500', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+            <span style={{ height: '8px', width: '8px', background: '#ff9500', borderRadius: '50%', boxShadow: '0 0 10px #ff9500', animation: 'pulse 1.5s infinite' }}></span>
+            TRANSACTION ACTIVE
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => { setQueryInput("CONFIRMAR"); setTimeout(() => handleExecute(), 50); }} style={{
+              background: 'rgba(48, 209, 88, 0.2)', border: '1px solid #30d158', color: '#30d158', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px'
+            }}>✅ CONFIRMAR</button>
+            <button onClick={() => { setQueryInput("DESHACER"); setTimeout(() => handleExecute(), 50); }} style={{
+              background: 'rgba(255, 69, 58, 0.2)', border: '1px solid #ff453a', color: '#ff453a', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px'
+            }}>❌ DESHACER</button>
+          </div>
+        </div>
+      )}
+
       {/* SIDEBAR */}
       <aside className="sidebar glass">
         <div className="sidebar-header">
@@ -255,9 +264,28 @@ function App() {
                 <div className="metric-title">Queries Executed</div>
                 <div className="metric-value">{metrics.total_queries}</div>
               </div>
-              <div className="glass-card">
-                <div className="metric-title">Avg. Latency</div>
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                <div className="metric-title">Live Latency (ms)</div>
                 <div className="metric-value">{metrics.avg_latency_ms} ms</div>
+                
+                {/* SVG SPARKLINE GRAPH */}
+                <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', height: '40px', opacity: 0.5 }}>
+                  <svg width="100%" height="100%" preserveAspectRatio="none">
+                    <polyline 
+                      points={latencyHistory.map((val, i) => {
+                        const x = (i / (latencyHistory.length - 1)) * 100;
+                        const maxLat = Math.max(10, ...latencyHistory);
+                        const y = 40 - (Math.min(val, maxLat) / maxLat * 40);
+                        return `${x}%,${y}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="var(--accent-primary)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
               <div className="glass-card">
                 <div className="metric-title">Active Database</div>
@@ -274,21 +302,68 @@ function App() {
                     Type a Natural Language command or SQL to execute in the C Engine.
                   </div>
                 )}
-                {chatHistory.map((msg, idx) => (
-                  <div key={idx} style={{
-                    alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                    background: msg.role === 'user' ? 'rgba(10, 132, 255, 0.2)' : (msg.role === 'error' ? 'rgba(255, 50, 50, 0.2)' : 'rgba(255, 255, 255, 0.05)'),
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    maxWidth: '80%',
-                    border: '1px solid ' + (msg.role === 'user' ? 'rgba(10, 132, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)'),
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: msg.role !== 'user' ? 'var(--font-mono)' : 'var(--font-sans)',
-                    fontSize: msg.role !== 'user' ? '13px' : '15px'
-                  }}>
-                    {msg.content}
-                  </div>
-                ))}
+                {chatHistory.map((msg, idx) => {
+                  // Extract CREAR INDICE commands - only match real field names (not <placeholders>)
+                  const indexMatch = msg.content.match(/CREAR INDICE\s+([a-zA-Z_]\w*)\s+([a-zA-Z_]\w*)/i);
+                  const isAnalysis = msg.content.includes('[CONSCIENCE ANALYSIS]') || msg.content.includes('[CONSCIENCE ANALISIS]');
+                  
+                  return (
+                    <div key={idx} style={{
+                      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      background: msg.role === 'user' 
+                        ? 'rgba(10, 132, 255, 0.2)' 
+                        : msg.role === 'error' 
+                          ? 'rgba(255, 50, 50, 0.2)' 
+                          : isAnalysis 
+                            ? 'rgba(94, 92, 230, 0.15)' 
+                            : 'rgba(255, 255, 255, 0.05)',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      maxWidth: '80%',
+                      border: '1px solid ' + (msg.role === 'user' 
+                        ? 'rgba(10, 132, 255, 0.4)' 
+                        : isAnalysis 
+                          ? 'rgba(94, 92, 230, 0.4)' 
+                          : 'rgba(255, 255, 255, 0.1)'),
+                      whiteSpace: 'pre-wrap',
+                      fontFamily: msg.role !== 'user' ? 'var(--font-mono)' : 'var(--font-sans)',
+                      fontSize: msg.role !== 'user' ? '13px' : '15px'
+                    }}>
+                      {msg.content}
+                      {isAnalysis && indexMatch && (
+                        <button 
+                          onClick={async () => {
+                            const cmd = `CREAR INDICE ${indexMatch[1]} ${indexMatch[2]}`;
+                            setChatHistory(prev => [...prev, 
+                              { role: 'user', content: cmd },
+                            ]);
+                            try {
+                              const result = await invoke("execute_motor", { query: cmd, db: currentDb });
+                              setChatHistory(prev => [...prev, { role: 'conscience', content: result }]);
+                            } catch (e) {
+                              setChatHistory(prev => [...prev, { role: 'error', content: String(e) }]);
+                            }
+                          }}
+                          style={{
+                            display: 'block',
+                            marginTop: '12px',
+                            padding: '8px 16px',
+                            background: 'linear-gradient(135deg, #30d158, #34c759)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: 'white',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            letterSpacing: '0.5px'
+                          }}
+                        >
+                          ⚡ Apply: CREAR INDICE {indexMatch[1]} {indexMatch[2]}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
                 {isProcessing && <div style={{ color: 'var(--text-secondary)' }}>Conscience is thinking...</div>}
                 <div ref={chatEndRef} />
               </div>
@@ -346,6 +421,20 @@ function App() {
                           letterSpacing: '1px'
                         }}>
                           {col}
+                          {explorerData.indexes?.includes(col) && (
+                            <span style={{
+                              marginLeft: '8px',
+                              background: 'linear-gradient(135deg, rgba(48, 209, 88, 0.2), rgba(52, 199, 89, 0.1))',
+                              color: '#34c759',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              border: '1px solid rgba(52, 199, 89, 0.3)'
+                            }}>
+                              ⚡ INDEXED
+                            </span>
+                          )}
                         </th>
                       ))}
                     </tr>

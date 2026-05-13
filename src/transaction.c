@@ -17,6 +17,21 @@
 static int en_transaccion = 0;
 static char tx_db_nombre[MAX_NOMBRE] = {0};
 
+// Auto-restore transaction state from disk (needed because UI runs C engine per query)
+void restaurar_estado_transaccion(const char* db) {
+    if (!db) return;
+    char path[256];
+    snprintf(path, sizeof(path), "data/%s/_tx_log.csv", db);
+    if (access(path, F_OK) == 0) {
+        en_transaccion = 1;
+        strncpy(tx_db_nombre, db, MAX_NOMBRE - 1);
+        tx_db_nombre[MAX_NOMBRE - 1] = '\0';
+    } else {
+        en_transaccion = 0;
+        tx_db_nombre[0] = '\0';
+    }
+}
+
 const char* tx_log_path(void) {
     static char path[MAX_NOMBRE + 20];
     if (tx_db_nombre[0]) {

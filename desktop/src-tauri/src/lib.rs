@@ -200,6 +200,7 @@ fn get_dashboard_metrics() -> Result<DashboardMetrics, String> {
 struct TableData {
     columns: Vec<String>,
     rows: Vec<Vec<String>>,
+    indexes: Vec<String>,
 }
 
 #[tauri::command]
@@ -230,7 +231,20 @@ fn get_table_data(db: String, table: String) -> Result<TableData, String> {
         }
     }
     
-    Ok(TableData { columns, rows })
+    let mut indexes = Vec::new();
+    let db_dir = root.join(format!("data/{}", db));
+    if let Ok(entries) = fs::read_dir(&db_dir) {
+        let prefix = format!("{}_", table);
+        for entry in entries.flatten() {
+            let file_name = entry.file_name().into_string().unwrap_or_default();
+            if file_name.starts_with(&prefix) && file_name.ends_with(".idx") {
+                let field = &file_name[prefix.len()..file_name.len() - 4];
+                indexes.push(field.to_string());
+            }
+        }
+    }
+    
+    Ok(TableData { columns, rows, indexes })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

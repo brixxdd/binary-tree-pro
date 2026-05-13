@@ -103,7 +103,7 @@ const char * llm_think(const char * prompt) {
 
     // Build JSON body with properly escaped prompt
     snprintf(json_buffer, sizeof(json_buffer),
-        "{\"model\":\"%s\",\"messages\":[{\"role\":\"system\",\"content\":\"Eres MOTOR CONSCIENCE, asistente de IA. Responde en 1-2 oraciones, se conciso.\"},{\"role\":\"user\",\"content\":\"%s\"}],\"max_tokens\":256,\"temperature\":0.7}",
+        "{\"model\":\"%s\",\"messages\":[{\"role\":\"system\",\"content\":\"Eres MOTOR CONSCIENCE, optimizador de BD. Responde conciso, máximo 5 líneas. Usa formato: 1) 2) 3) 4). Cuando sugieras índices usa la sintaxis: CREAR INDICE <tabla> <campo>.\"},{\"role\":\"user\",\"content\":\"%s\"}],\"max_tokens\":512,\"temperature\":0.7}",
         state.model, escaped_prompt);
 
     // Build curl command
